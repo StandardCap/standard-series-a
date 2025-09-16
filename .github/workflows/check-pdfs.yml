@@ -1,0 +1,41 @@
+name: Check PDFs are in sync
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-pdfs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make build script executable
+        run: chmod +x build.sh
+
+      - name: Run PDF build
+        run: ./build.sh
+
+      - name: Check DOCX checksums
+        run: |
+          echo "Generating current DOCX checksums..."
+          md5sum *.docx > current-checksums
+          if cmp -s .docx-checksums current-checksums; then
+            echo "✅ DOCX files match committed checksums - PDFs are in sync"
+          else
+            echo "❌ DOCX files have changed since PDFs were last built"
+            echo ""
+            echo "Committed checksums:"
+            cat .docx-checksums
+            echo ""
+            echo "Current checksums:"
+            cat current-checksums
+            echo ""
+            echo "Please run './build.sh' locally and commit the updated PDFs and checksums."
+            exit 1
+          fi
